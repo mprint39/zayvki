@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система заявок</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-top: 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 16px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .btn-completed {
+            background: linear-gradient(135deg, #0ba360 0%, #3cba92 100%);
+        }
+
+        .section-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .product-name {
+            flex: 1;
+        }
+
+        .product-input {
+            width: 80px;
+            padding: 8px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+            text-align: center;
+        }
+
+        .supplier-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .status-info {
+            text-align: center;
+            margin: 15px 0;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Экран приветствия -->
+        <div id="welcome-screen" class="card">
+            <div class="header">
+                <h1>Система заявок</h1>
+                <p>Создание заявок на продукты для точек общепита</p>
+            </div>
+            <button id="start-btn" class="btn btn-primary">Начать работу</button>
+        </div>
+
+        <!-- Экран выбора роли -->
+        <div id="role-screen" class="card hidden">
+            <button class="back-btn" id="back-from-role">
+                <span>←</span> Назад
+            </button>
+            <h2 class="section-title">Выберите вашу роль</h2>
+            <button class="btn" data-role="admin">Администратор</button>
+            <button class="btn" data-role="povar">Повар</button>
+        </div>
+
+        <!-- Экран выбора точки -->
+        <div id="location-screen" class="card hidden">
+            <button class="back-btn" id="back-from-location">
+                <span>←</span> Назад
+            </button>
+            <h2 class="section-title">Выберите точку</h2>
+            <button class="btn" data-location="karamzina">Карамзина 42</button>
+            <button class="btn" data-location="gagarina">Гагарина 245</button>
+            <button class="btn" data-location="chelnokova">Челнокова 39</button>
+            <button class="btn" data-location="zhukova">Жукова 2а</button>
+            <button class="btn" data-location="sovetskaya">Советская 10б</button>
+        </div>
+
+        <!-- Экран поставщиков -->
+        <div id="suppliers-screen" class="card hidden">
+            <button class="back-btn" id="back-from-suppliers">
+                <span>←</span> Назад
+            </button>
+            <h2 class="section-title">Поставщики</h2>
+            <div class="progress-bar">
+                <div class="progress" id="progress-bar"></div>
+            </div>
+            <p class="status-info" id="completion-status">Заполнено: 0/0</p>
+            <div class="supplier-list" id="supplier-list">
+                <!-- Список поставщиков будет сгенерирован динамически -->
+            </div>
+            <button id="generate-pdf-btn" class="btn btn-primary hidden">Сформировать заявку</button>
+        </div>
+
+        <!-- Экран ввода данных -->
+        <div id="input-screen" class="card hidden">
+            <button class="back-btn" id="back-from-input">
+                <span>←</span> Назад
+            </button>
+            <h2 class="section-title" id="supplier-title">Поставщик</h2>
+            <div id="products-list">
+                <!-- Список продуктов будет сгенерирован динамически -->
+            </div>
+            <button id="save-supplier-btn" class="btn btn-success">Сохранить данные</button>
+        </div>
+
+        <!-- Экран загрузки -->
+        <div id="loading-screen" class="card hidden">
+            <div class="loader"></div>
+            <p class="status-info">Загрузка данных...</p>
+        </div>
+
+        <!-- Экран завершения -->
+        <div id="completion-screen" class="card hidden">
+            <h2 class="section-title">Заявка сформирована!</h2>
+            <p class="status-info">Ваша заявка успешно создана и отправлена.</p>
+            <button id="new-request-btn" class="btn btn-primary">Создать новую заявку</button>
+        </div>
+    </div>
+
+    <!-- Уведомление -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Основные переменные приложения
+        let appState = {
+            role: null,
+            location: null,
+            currentSupplier: null,
+            suppliers: [],
+            products: {},
+            completedSuppliers: 0
+        };
+
+        // Элементы DOM
+        const screens = {
+            welcome: document.getElementById('welcome-screen'),
+            role: document.getElementById('role-screen'),
+            location: document.getElementById('location-screen'),
+            suppliers: document.getElementById('suppliers-screen'),
+            input: document.getElementById('input-screen'),
+            loading: document.getElementById('loading-screen'),
+            completion: document.getElementById('completion-screen')
+        };
+
+        const buttons = {
+            start: document.getElementById('start-btn'),
+            backFromRole: document.getElementById('back-from-role'),
+            backFromLocation: document.getElementById('back-from-location'),
+            backFromSuppliers: document.getElementById('back-from-suppliers'),
+            backFromInput: document.getElementById('back-from-input'),
+            generatePdf: document.getElementById('generate-pdf-btn'),
+            saveSupplier: document.getElementById('save-supplier-btn'),
+            newRequest: document.getElementById('new-request-btn')
+        };
+
+        const elements = {
+            supplierList: document.getElementById('supplier-list'),
+            productsList: document.getElementById('products-list'),
+            supplierTitle: document.getElementById('supplier-title'),
+            progressBar: document.getElementById('progress-bar'),
+            completionStatus: document.getElementById('completion-status'),
+            notification: document.getElementById('notification')
+        };
+
+        // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            // Инициализация Telegram WebApp
+            if (window.Telegram && Telegram.WebApp) {
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand();
+            }
+
+            // Настройка обработчиков событий
+            setupEventListeners();
+        });
+
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Кнопки навигации
+            buttons.start.addEventListener('click', () => showScreen('role'));
+            buttons.backFromRole.addEventListener('click', () => showScreen('welcome'));
+            buttons.backFromLocation.addEventListener('click', () => showScreen('role'));
+            buttons.backFromSuppliers.addEventListener('click', () => showScreen('location'));
+            buttons.backFromInput.addEventListener('click', () => showScreen('suppliers'));
+            buttons.generatePdf.addEventListener('click', generatePdf);
+            buttons.saveSupplier.addEventListener('click', saveSupplierData);
+            buttons.newRequest.addEventListener('click', resetApp);
+
+            // Выбор роли
+            document.querySelectorAll('[data-role]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    appState.role = this.getAttribute('data-role');
+                    showScreen('location');
+                });
+            });
+
+            // Выбор точки
+            document.querySelectorAll('[data-location]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    appState.location = this.getAttribute('data-location');
+                    loadSuppliersData();
+                });
+            });
+        }
+
+        // Показать определенный экран
+        function showScreen(screenName) {
+            // Скрыть все экраны
+            Object.values(screens).forEach(screen => {
+                screen.classList.add('hidden');
+            });
+            
+            // Показать нужный экран
+            screens[screenName].classList.remove('hidden');
+        }
+
+        // Загрузка данных о поставщиках
+        async function loadSuppliersData() {
+            showScreen('loading');
+            
+            // Имитация загрузки данных (в реальном приложении здесь будет запрос к GitHub)
+            setTimeout(() => {
+                // Пример данных поставщиков
+                appState.suppliers = [
+                    { id: 'vostok-zapad', name: 'Восток-Запад', completed: false },
+                    { id: 'resmarket', name: 'РесМаркет', completed: false },
+                    { id: 'prodresurs', name: 'ПродРесурс', completed: false },
+                    { id: 'metrotorg', name: 'МетроТорг', completed: false }
+                ];
+                
+                // Пример данных продуктов для демонстрации
+                appState.products = {
+                    'vostok-zapad': [
+                        { name: 'Картофель', required: 50, actual: 0, toOrder: 0 },
+                        { name: 'Морковь', required: 30, actual: 0, toOrder: 0 },
+                        { name: 'Лук репчатый', required: 20, actual: 0, toOrder: 0 },
+                        { name: 'Капуста', required: 15, actual: 0, toOrder: 0 }
+                    ],
+                    'resmarket': [
+                        { name: 'Мясо говядина', required: 25, actual: 0, toOrder: 0 },
+                        { name: 'Мясо свинина', required: 20, actual: 0, toOrder: 0 },
+                        { name: 'Курица', required: 30, actual: 0, toOrder: 0 },
+                        { name: 'Рыба', required: 15, actual: 0, toOrder: 0 }
+                    ],
+                    'prodresurs': [
+                        { name: 'Молоко', required: 40, actual: 0, toOrder: 0 },
+                        { name: 'Сметана', required: 15, actual: 0, toOrder: 0 },
+                        { name: 'Творог', required: 20, actual: 0, toOrder: 0 },
+                        { name: 'Сыр', required: 10, actual: 0, toOrder: 0 }
+                    ],
+                    'metrotorg': [
+                        { name: 'Масло растительное', required: 10, actual: 0, toOrder: 0 },
+                        { name: 'Сахар', required: 15, actual: 0, toOrder: 0 },
+                        { name: 'Соль', required: 5, actual: 0, toOrder: 0 },
+                        { name: 'Перец', required: 3, actual: 0, toOrder: 0 }
+                    ]
+                };
+                
+                renderSuppliersList();
+                showScreen('suppliers');
+            }, 1500);
+        }
+
+        // Отображение списка поставщиков
+        function renderSuppliersList() {
+            elements.supplierList.innerHTML = '';
+            
+            appState.suppliers.forEach(supplier => {
+                const button = document.createElement('button');
+                button.className = `btn ${supplier.completed ? 'btn-completed' : ''}`;
+                button.textContent = supplier.completed ? `${supplier.name} ✓` : supplier.name;
+                button.addEventListener('click', () => openSupplierInput(supplier.id));
+                
+                elements.supplierList.appendChild(button);
+            });
+            
+            updateProgress();
+        }
+
+        // Обновление прогресса заполнения
+        function updateProgress() {
+            appState.completedSuppliers = appState.suppliers.filter(s => s.completed).length;
+            const totalSuppliers = appState.suppliers.length;
+            const progressPercent = (appState.completedSuppliers / totalSuppliers) * 100;
+            
+            elements.progressBar.style.width = `${progressPercent}%`;
+            elements.completionStatus.textContent = `Заполнено: ${appState.completedSuppliers}/${totalSuppliers}`;
+            
+            // Показать/скрыть кнопку генерации PDF
+            if (appState.completedSuppliers === totalSuppliers) {
+                buttons.generatePdf.classList.remove('hidden');
+            } else {
+                buttons.generatePdf.classList.add('hidden');
+            }
+        }
+
+        // Открытие экрана ввода данных для поставщика
+        function openSupplierInput(supplierId) {
+            appState.currentSupplier = supplierId;
+            const supplier = appState.suppliers.find(s => s.id === supplierId);
+            
+            elements.supplierTitle.textContent = supplier.name;
+            renderProductsList(supplierId);
+            
+            showScreen('input');
+        }
+
+        // Отображение списка продуктов для ввода
+        function renderProductsList(supplierId) {
+            elements.productsList.innerHTML = '';
+            
+            const products = appState.products[supplierId];
+            
+            products.forEach((product, index) => {
+                const productItem = document.createElement('div');
+                productItem.className = 'product-item';
+                
+                productItem.innerHTML = `
+                    <div class="product-name">${product.name}</div>
+                    <div>Норма: ${product.required}</div>
+                    <input type="number" class="product-input" data-index="${index}" 
+                           value="${product.actual}" placeholder="0" min="0">
+                `;
+                
+                elements.productsList.appendChild(productItem);
+            });
+        }
+
+        // Сохранение данных поставщика
+        function saveSupplierData() {
+            const supplierId = appState.currentSupplier;
+            const products = appState.products[supplierId];
+            const inputs = document.querySelectorAll('.product-input');
+            
+            // Обновление данных продуктов
+            inputs.forEach(input => {
+                const index = parseInt(input.getAttribute('data-index'));
+                const actual = parseInt(input.value) || 0;
+                
+                products[index].actual = actual;
+                products[index].toOrder = Math.max(0, products[index].required - actual);
+            });
+            
+            // Отметка поставщика как заполненного
+            const supplier = appState.suppliers.find(s => s.id === supplierId);
+            supplier.completed = true;
+            
+            showNotification('Данные сохранены!');
+            renderSuppliersList();
+            showScreen('suppliers');
+        }
+
+        // Генерация PDF
+        function generatePdf() {
+            showScreen('loading');
+            
+            // Имитация генерации PDF
+            setTimeout(() => {
+                // В реальном приложении здесь будет код генерации PDF с использованием jsPDF
+                showNotification('PDF сгенерирован!');
+                showScreen('completion');
+                
+                // В реальном приложении здесь будет отправка в Telegram
+                if (window.Telegram && Telegram.WebApp) {
+                    Telegram.WebApp.sendData(JSON.stringify({
+                        action: 'request_created',
+                        role: appState.role,
+                        location: appState.location,
+                        timestamp: new Date().toISOString()
+                    }));
+                }
+            }, 2000);
+        }
+
+        // Сброс приложения для новой заявки
+        function resetApp() {
+            appState = {
+                role: null,
+                location: null,
+                currentSupplier: null,
+                suppliers: [],
+                products: {},
+                completedSuppliers: 0
+            };
+            
+            showScreen('welcome');
+        }
+
+        // Показать уведомление
+        function showNotification(message) {
+            elements.notification.textContent = message;
+            elements.notification.classList.add('show');
+            
+            setTimeout(() => {
+                elements.notification.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

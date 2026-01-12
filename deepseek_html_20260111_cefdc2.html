@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 Задачник для команды</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.4;
+        }
+        
+        .container {
+            max-width: 100%;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 16px;
+            border-radius: 0 0 20px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .user-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            color: #666;
+        }
+        
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .task-section {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .section-count {
+            background: #e8f4ff;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .task-item {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .task-item.completed {
+            border-left-color: #4caf50;
+            opacity: 0.7;
+        }
+        
+        .task-item.urgent {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        
+        .task-item.overdue {
+            border-left-color: #ff9800;
+            background: #fff8e1;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .task-title {
+            font-weight: 500;
+            color: #333;
+            flex: 1;
+            padding-right: 10px;
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            background: white;
+        }
+        
+        .task-checkbox.checked {
+            background: #4caf50;
+            border-color: #4caf50;
+            color: white;
+        }
+        
+        .task-meta {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .meta-item i {
+            font-size: 11px;
+        }
+        
+        .deadline {
+            color: #f44336;
+            font-weight: 500;
+        }
+        
+        .deadline.overdue {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        
+        .assigner {
+            color: #1976d2;
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-weight: 600;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #666;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: #f5f5f5;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+        
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .datetime-inputs {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .datetime-inputs input {
+            flex: 1;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: white;
+            border: 2px solid #ddd;
+            color: #666;
+        }
+        
+        .btn-secondary:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .user-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        
+        .user-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-item:hover {
+            background: #f5f5f5;
+        }
+        
+        .user-item.selected {
+            background: #e8f4ff;
+            border-left: 4px solid #1976d2;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .user-username {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .floating-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            z-index: 100;
+            transition: all 0.3s;
+            border: none;
+        }
+        
+        .floating-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: #666;
+            gap: 12px;
+        }
+        
+        .loading i {
+            font-size: 32px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 8px 12px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+        
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 12px 16px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            z-index: 90;
+        }
+        
+        .stats {
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .stats span {
+            font-weight: 500;
+            color: #667eea;
+        }
+        
+        @media (max-width: 480px) {
+            .header {
+                padding: 16px;
+            }
+            
+            .user-badge {
+                position: static;
+                margin-top: 10px;
+                width: fit-content;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            .datetime-inputs {
+                flex-direction: column;
+            }
+            
+            .modal {
+                max-height: 80vh;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка -->
+        <div class="header">
+            <h1><i class="fas fa-tasks"></i> Задачник команды</h1>
+            <p>Управление задачами и поручениями</p>
+            <div class="user-badge" id="user-badge">
+                <i class="fas fa-user"></i>
+                <span id="user-name">Загрузка...</span>
+            </div>
+        </div>
+        
+        <!-- Вкладки -->
+        <div class="tabs">
+            <button class="tab active" data-tab="my-tasks">Мои задачи</button>
+            <button class="tab" data-tab="team-tasks">Все задачи</button>
+        </div>
+        
+        <!-- Вкладка "Мои задачи" -->
+        <div class="tab-content active" id="tab-my-tasks">
+            <!-- Фильтры -->
+            <div class="filter-buttons" id="my-filters">
+                <button class="filter-btn active" data-filter="all">Все</button>
+                <button class="filter-btn" data-filter="active">Активные</button>
+                <button class="filter-btn" data-filter="completed">Выполненные</button>
+                <button class="filter-btn" data-filter="urgent">Срочные</button>
+            </div>
+            
+            <!-- Активные задачи -->
+            <div class="task-section" id="my-active-tasks">
+                <div class="section-header">
+                    <div class="section-title">Активные задачи</div>
+                    <div class="section-count" id="active-count">0</div>
+                </div>
+                <div class="task-list" id="my-active-list">
+                    <div class="loading">
+                        <i class="fas fa-spinner"></i>
+                        <span>Загрузка задач...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Выполненные задачи -->
+            <div class="task-section" id="my-completed-tasks">
+                <div class="section-header">
+                    <div class="section-title">Выполненные задачи</div>
+                    <div class="section-count" id="completed-count">0</div>
+                </div>
+                <div class="task-list" id="my-completed-list">
+                    <!-- Сюда загружаются выполненные задачи -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Вкладка "Все задачи" -->
+        <div class="tab-content" id="tab-team-tasks">
+            <!-- Фильтры -->
+            <div class="filter-buttons" id="team-filters">
+                <button class="filter-btn active" data-filter="all">Все</button>
+                <button class="filter-btn" data-filter="active">Активные</button>
+                <button class="filter-btn" data-filter="completed">Выполненные</button>
+                <button class="filter-btn" data-filter="my-assigned">Назначенные мной</button>
+            </div>
+            
+            <!-- Список пользователей с задачами -->
+            <div id="team-tasks-list">
+                <div class="loading">
+                    <i class="fas fa-spinner"></i>
+                    <span>Загрузка списка команды...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Модальное окно добавления задачи -->
+        <div class="modal-overlay" id="add-task-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <div class="modal-title">➕ Добавить задачу</div>
+                    <button class="modal-close" id="close-add-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Задача:</label>
+                        <textarea class="form-textarea" id="task-title" 
+                                  placeholder="Опишите задачу..." 
+                                  maxlength="500"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Исполнитель:</label>
+                        <div class="user-list" id="assignee-list">
+                            <!-- Список пользователей будет загружен -->
+                            <div class="loading">
+                                <i class="fas fa-spinner"></i>
+                                <span>Загрузка списка...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Дата выполнения:</label>
+                            <input type="date" class="form-input" id="task-date" 
+                                   min="">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Время:</label>
+                            <input type="time" class="form-input" id="task-time" 
+                                   value="18:00">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="task-urgent">
+                            <span style="margin-left: 8px;">Срочная задача</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" id="cancel-add-task">
+                            Отмена
+                        </button>
+                        <button class="btn btn-primary" id="save-task">
+                            Сохранить задачу
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Кнопка добавления задачи -->
+        <button class="floating-btn" id="add-task-btn">
+            <i class="fas fa-plus"></i>
+        </button>
+    </div>
+    
+    <!-- Статус-бар -->
+    <div class="status-bar" id="status-bar">
+        <div class="stats">
+            Активных: <span id="stats-active">0</span> | 
+            Срочных: <span id="stats-urgent">0</span> | 
+            Всего: <span id="stats-total">0</span>
+        </div>
+        <div style="font-size: 12px; color: #666;">
+            <i class="fas fa-sync-alt" id="sync-icon"></i>
+        </div>
+    </div>
+
+    <script>
+        // ===================== КОНФИГУРАЦИЯ =====================
+        const CONFIG = {
+            // Для хранения данных в Telegram Cloud Storage
+            STORAGE_KEY: 'team_tasks_app',
+            
+            // Настройки приложения
+            APP_NAME: 'Задачник команды',
+            
+            // Настройки задач
+            TASK_STATUS: {
+                ACTIVE: 'active',
+                COMPLETED: 'completed'
+            },
+            
+            // Цвета для аватарок
+            AVATAR_COLORS: [
+                '#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe',
+                '#43e97b', '#38f9d7', '#fa709a', '#ffecd2', '#fcb69f'
+            ]
+        };
+        
+        // ===================== ИНИЦИАЛИЗАЦИЯ ТЕЛЕГРАМ =====================
+        const tg = window.Telegram.WebApp;
+        let tgInitialized = false;
+        
+        if (tg && tg.initDataUnsafe) {
+            tg.expand();
+            tg.MainButton.hide();
+            tgInitialized = true;
+            console.log('Telegram WebApp инициализирован');
+        } else {
+            console.warn('Telegram WebApp не обнаружен. Работаем в режиме браузера.');
+        }
+        
+        // ===================== СОСТОЯНИЕ ПРИЛОЖЕНИЯ =====================
+        const state = {
+            currentUser: null,
+            users: [], // Все пользователи приложения
+            tasks: [], // Все задачи
+            currentTab: 'my-tasks',
+            currentFilter: 'all',
+            isLoading: false,
+            lastSync: null
+        };
+        
+        // ===================== ИНИЦИАЛИЗАЦИЯ =====================
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                console.log('Инициализация задачника...');
+                initEventListeners();
+                await initializeApp();
+                updateUI();
+                loadTasks();
+            } catch (error) {
+                console.error('Ошибка инициализации:', error);
+                showError('Ошибка загрузки приложения. Пожалуйста, обновите страницу.');
+            }
+        });
+        
+        // ===================== ОСНОВНЫЕ ФУНКЦИИ =====================
+        async function initializeApp() {
+            // Получаем данные текущего пользователя из Telegram
+            if (tgInitialized) {
+                const user = tg.initDataUnsafe.user;
+                state.currentUser = {
+                    id: user.id.toString(),
+                    firstName: user.first_name,
+                    lastName: user.last_name || '',
+                    username: user.username || '',
+                    isBot: user.is_bot || false
+                };
+            } else {
+                // Для режима браузера - тестовый пользователь
+                state.currentUser = {
+                    id: 'browser_user_1',
+                    firstName: 'Тестовый',
+                    lastName: 'Пользователь',
+                    username: 'test_user',
+                    isBot: false
+                };
+            }
+            
+            // Обновляем отображение пользователя
+            updateUserDisplay();
+            
+            // Загружаем данные
+            await loadData();
+        }
+        
+        async function loadData() {
+            state.isLoading = true;
+            
+            try {
+                // Загружаем данные из хранилища
+                const data = await loadFromStorage();
+                
+                if (data) {
+                    state.users = data.users || [];
+                    state.tasks = data.tasks || [];
+                    state.lastSync = data.lastSync || null;
+                }
+                
+                // Если пользователя нет в списке - добавляем
+                if (!state.users.find(u => u.id === state.currentUser.id)) {
+                    addCurrentUserToList();
+                }
+                
+                console.log('Данные загружены:', {
+                    users: state.users.length,
+                    tasks: state.tasks.length
+                });
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                // Инициализируем пустые данные
+                state.users = [];
+                state.tasks = [];
+                addCurrentUserToList();
+            } finally {
+                state.isLoading = false;
+            }
+        }
+        
+        function addCurrentUserToList() {
+            // Генерируем цвет для аватарки
+            const colorIndex = state.users.length % CONFIG.AVATAR_COLORS.length;
+            
+            state.users.push({
+                id: state.currentUser.id,
+                firstName: state.currentUser.firstName,
+                lastName: state.currentUser.lastName,
+                username: state.currentUser.username,
+                avatarColor: CONFIG.AVATAR_COLORS[colorIndex],
+                joinedAt: new Date().toISOString()
+            });
+        }
+        
+        function updateUserDisplay() {
+            const userBadge = document.getElementById('user-badge');
+            const userName = document.getElementById('user-name');
+            
+            if (userBadge && userName) {
+                const fullName = `${state.currentUser.firstName} ${state.currentUser.lastName}`.trim();
+                userName.textContent = fullName;
+                
+                // Добавляем иконку бота если это бот
+                if (state.currentUser.isBot) {
+                    userBadge.innerHTML += ' <i class="fas fa-robot" style="font-size: 10px;"></i>';
+                }
+            }
+        }
+        
+        function initEventListeners() {
+            // Вкладки
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.dataset.tab;
+                    switchTab(tabId);
+                });
+            });
+            
+            // Фильтры для "Мои задачи"
+            document.querySelectorAll('#my-filters .filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const filter = this.dataset.filter;
+                    setFilter(filter, 'my');
+                });
+            });
+            
+            // Фильтры для "Все задачи"
+            document.querySelectorAll('#team-filters .filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const filter = this.dataset.filter;
+                    setFilter(filter, 'team');
+                });
+            });
+            
+            // Модальное окно добавления задачи
+            document.getElementById('add-task-btn').addEventListener('click', showAddTaskModal);
+            document.getElementById('close-add-modal').addEventListener('click', hideAddTaskModal);
+            document.getElementById('cancel-add-task').addEventListener('click', hideAddTaskModal);
+            
+            // Сохранение задачи
+            document.getElementById('save-task').addEventListener('click', saveTask);
+            
+            // Клик по оверлею для закрытия модалки
+            document.getElementById('add-task-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideAddTaskModal();
+                }
+            });
+            
+            // Устанавливаем минимальную дату как сегодня
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('task-date').min = today;
+        }
+        
+        function switchTab(tabId) {
+            state.currentTab = tabId;
+            
+            // Обновляем активную вкладку
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabId);
+            });
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `tab-${tabId}`);
+            });
+            
+            // Обновляем контент
+            if (tabId === 'my-tasks') {
+                loadMyTasks();
+            } else if (tabId === 'team-tasks') {
+                loadTeamTasks();
+            }
+        }
+        
+        function setFilter(filter, type) {
+            if (type === 'my') {
+                state.currentFilter = filter;
+                
+                // Обновляем активные кнопки фильтров
+                document.querySelectorAll('#my-filters .filter-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.filter === filter);
+                });
+                
+                loadMyTasks();
+            } else if (type === 'team') {
+                // Для команды сохраняем фильтр в data-атрибут
+                document.querySelectorAll('#team-filters .filter-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.filter === filter);
+                });
+                
+                loadTeamTasks();
+            }
+        }
+        
+        // ===================== РАБОТА С ЗАДАЧАМИ =====================
+        function loadTasks() {
+            if (state.currentTab === 'my-tasks') {
+                loadMyTasks();
+            } else {
+                loadTeamTasks();
+            }
+            
+            updateStatistics();
+        }
+        
+        function loadMyTasks() {
+            const activeList = document.getElementById('my-active-list');
+            const completedList = document.getElementById('my-completed-list');
+            
+            if (!activeList || !completedList) return;
+            
+            // Фильтруем задачи текущего пользователя
+            const userTasks = state.tasks.filter(task => 
+                task.assigneeId === state.currentUser.id
+            );
+            
+            // Разделяем на активные и выполненные
+            const activeTasks = userTasks.filter(task => 
+                task.status === CONFIG.TASK_STATUS.ACTIVE
+            );
+            
+            const completedTasks = userTasks.filter(task => 
+                task.status === CONFIG.TASK_STATUS.COMPLETED
+            );
+            
+            // Применяем фильтр
+            let filteredActive = activeTasks;
+            let filteredCompleted = completedTasks;
+            
+            if (state.currentFilter === 'urgent') {
+                filteredActive = activeTasks.filter(task => task.isUrgent);
+                filteredCompleted = completedTasks.filter(task => task.isUrgent);
+            } else if (state.currentFilter === 'completed') {
+                filteredActive = [];
+            } else if (state.currentFilter === 'active') {
+                filteredCompleted = [];
+            }
+            
+            // Обновляем счетчики
+            document.getElementById('active-count').textContent = filteredActive.length;
+            document.getElementById('completed-count').textContent = filteredCompleted.length;
+            
+            // Рендерим задачи
+            renderTaskList(filteredActive, activeList, true);
+            renderTaskList(filteredCompleted, completedList, true);
+            
+            // Показываем/скрываем секции
+            document.getElementById('my-active-tasks').classList.toggle('hidden', filteredActive.length === 0);
+            document.getElementById('my-completed-tasks').classList.toggle('hidden', filteredCompleted.length === 0);
+        }
+        
+        function loadTeamTasks() {
+            const teamList = document.getElementById('team-tasks-list');
+            if (!teamList) return;
+            
+            const filter = document.querySelector('#team-filters .filter-btn.active')?.dataset.filter || 'all';
+            
+            // Группируем задачи по пользователям
+            const usersWithTasks = state.users.map(user => {
+                let userTasks = state.tasks.filter(task => task.assigneeId === user.id);
+                
+                // Применяем фильтр
+                if (filter === 'active') {
+                    userTasks = userTasks.filter(task => task.status === CONFIG.TASK_STATUS.ACTIVE);
+                } else if (filter === 'completed') {
+                    userTasks = userTasks.filter(task => task.status === CONFIG.TASK_STATUS.COMPLETED);
+                } else if (filter === 'my-assigned') {
+                    userTasks = userTasks.filter(task => task.createdById === state.currentUser.id);
+                }
+                
+                return {
+                    ...user,
+                    tasks: userTasks
+                };
+            }).filter(user => user.tasks.length > 0);
+            
+            // Рендерим список пользователей с задачами
+            renderTeamTaskList(usersWithTasks, teamList);
+        }
+        
+        function renderTaskList(tasks, container, showActions = true) {
+            if (tasks.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-clipboard-list"></i>
+                        <p>Нет задач</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Сортируем задачи: сначала просроченные, потом срочные, потом по дате
+            const sortedTasks = [...tasks].sort((a, b) => {
+                // Проверяем просроченность
+                const aOverdue = isTaskOverdue(a);
+                const bOverdue = isTaskOverdue(b);
+                if (aOverdue && !bOverdue) return -1;
+                if (!aOverdue && bOverdue) return 1;
+                
+                // Срочные задачи выше
+                if (a.isUrgent && !b.isUrgent) return -1;
+                if (!a.isUrgent && b.isUrgent) return 1;
+                
+                // По дате выполнения (ближайшие выше)
+                return new Date(a.deadline) - new Date(b.deadline);
+            });
+            
+            let html = '';
+            
+            sortedTasks.forEach(task => {
+                const assignee = state.users.find(u => u.id === task.assigneeId);
+                const creator = state.users.find(u => u.id === task.createdById);
+                const overdue = isTaskOverdue(task);
+                const completed = task.status === CONFIG.TASK_STATUS.COMPLETED;
+                
+                html += `
+                    <div class="task-item ${completed ? 'completed' : ''} ${task.isUrgent ? 'urgent' : ''} ${overdue ? 'overdue' : ''}" 
+                         data-task-id="${task.id}">
+                        <div class="task-header">
+                            <div class="task-title">${escapeHtml(task.title)}</div>
+                            ${showActions ? `
+                            <div class="task-actions">
+                                <div class="task-checkbox ${completed ? 'checked' : ''}" 
+                                     onclick="toggleTaskCompletion('${task.id}')">
+                                    ${completed ? '<i class="fas fa-check"></i>' : ''}
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <div class="task-meta">
+                            ${task.deadline ? `
+                            <div class="meta-item">
+                                <i class="far fa-calendar-alt"></i>
+                                <span class="deadline ${overdue ? 'overdue' : ''}">
+                                    ${formatDeadline(task.deadline)} ${overdue ? ' (ПРОСРОЧЕНО)' : ''}
+                                </span>
+                            </div>
+                            ` : ''}
+                            ${creator ? `
+                            <div class="meta-item">
+                                <i class="fas fa-user-edit"></i>
+                                <span class="assigner">
+                                    От: ${escapeHtml(getUserDisplayName(creator))}
+                                </span>
+                            </div>
+                            ` : ''}
+                            ${!showActions && assignee ? `
+                            <div class="meta-item">
+                                <i class="fas fa-user-check"></i>
+                                <span>
+                                    Исполнитель: ${escapeHtml(getUserDisplayName(assignee))}
+                                </span>
+                            </div>
+                            ` : ''}
+                            <div class="meta-item">
+                                <i class="far fa-clock"></i>
+                                <span>Создано: ${formatDate(task.createdAt)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function renderTeamTaskList(usersWithTasks, container) {
+            if (usersWithTasks.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <p>Нет задач в команде</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            usersWithTasks.forEach(user => {
+                const activeTasks = user.tasks.filter(t => t.status === CONFIG.TASK_STATUS.ACTIVE);
+                const completedTasks = user.tasks.filter(t => t.status === CONFIG.TASK_STATUS.COMPLETED);
+                
+                html += `
+                    <div class="task-section">
+                        <div class="section-header">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div class="user-avatar" style="background: ${user.avatarColor}">
+                                    ${getUserInitials(user)}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: #333;">
+                                        ${escapeHtml(getUserDisplayName(user))}
+                                    </div>
+                                    ${user.username ? `
+                                    <div style="font-size: 12px; color: #666;">
+                                        @${escapeHtml(user.username)}
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="section-count">
+                                ${activeTasks.length} активных
+                            </div>
+                        </div>
+                `;
+                
+                if (activeTasks.length > 0) {
+                    html += '<div style="margin-top: 12px;">';
+                    activeTasks.forEach(task => {
+                        const creator = state.users.find(u => u.id === task.createdById);
+                        const overdue = isTaskOverdue(task);
+                        
+                        html += `
+                            <div class="task-item ${task.isUrgent ? 'urgent' : ''} ${overdue ? 'overdue' : ''}" 
+                                 data-task-id="${task.id}">
+                                <div class="task-title">${escapeHtml(task.title)}</div>
+                                <div class="task-meta">
+                                    ${task.deadline ? `
+                                    <div class="meta-item">
+                                        <i class="far fa-calendar-alt"></i>
+                                        <span class="deadline ${overdue ? 'overdue' : ''}">
+                                            ${formatDeadline(task.deadline)} ${overdue ? ' (ПРОСРОЧЕНО)' : ''}
+                                        </span>
+                                    </div>
+                                    ` : ''}
+                                    ${creator ? `
+                                    <div class="meta-item">
+                                        <i class="fas fa-user-edit"></i>
+                                        <span class="assigner">
+                                            От: ${escapeHtml(getUserDisplayName(creator))}
+                                        </span>
+                                    </div>
+                                    ` : ''}
+                                    <div class="meta-item">
+                                        <i class="far fa-clock"></i>
+                                        <span>Создано: ${formatDate(task.createdAt)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+                
+                html += `</div>`;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // ===================== МОДАЛЬНОЕ ОКНО ДОБАВЛЕНИЯ ЗАДАЧИ =====================
+        function showAddTaskModal() {
+            const modal = document.getElementById('add-task-modal');
+            modal.classList.add('active');
+            
+            // Загружаем список пользователей (исключая текущего)
+            loadAssigneeList();
+            
+            // Сбрасываем форму
+            document.getElementById('task-title').value = '';
+            document.getElementById('task-date').value = '';
+            document.getElementById('task-time').value = '18:00';
+            document.getElementById('task-urgent').checked = false;
+        }
+        
+        function hideAddTaskModal() {
+            document.getElementById('add-task-modal').classList.remove('active');
+        }
+        
+        function loadAssigneeList() {
+            const assigneeList = document.getElementById('assignee-list');
+            if (!assigneeList) return;
+            
+            // Исключаем текущего пользователя из списка назначения
+            const otherUsers = state.users.filter(user => user.id !== state.currentUser.id);
+            
+            if (otherUsers.length === 0) {
+                assigneeList.innerHTML = `
+                    <div class="empty-state" style="padding: 20px;">
+                        <i class="fas fa-users-slash"></i>
+                        <p>Нет других пользователей</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            otherUsers.forEach(user => {
+                html += `
+                    <div class="user-item" data-user-id="${user.id}">
+                        <div class="user-avatar" style="background: ${user.avatarColor}">
+                            ${getUserInitials(user)}
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name">${escapeHtml(getUserDisplayName(user))}</div>
+                            ${user.username ? `
+                            <div class="user-username">@${escapeHtml(user.username)}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            assigneeList.innerHTML = html;
+            
+            // Добавляем обработчики выбора пользователя
+            assigneeList.querySelectorAll('.user-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    // Снимаем выделение со всех
+                    assigneeList.querySelectorAll('.user-item').forEach(i => {
+                        i.classList.remove('selected');
+                    });
+                    
+                    // Выделяем выбранного
+                    this.classList.add('selected');
+                });
+            });
+            
+            // Выбираем первого пользователя по умолчанию
+            const firstUser = assigneeList.querySelector('.user-item');
+            if (firstUser) {
+                firstUser.classList.add('selected');
+            }
+        }
+        
+        async function saveTask() {
+            const title = document.getElementById('task-title').value.trim();
+            const selectedUser = document.querySelector('#assignee-list .user-item.selected');
+            const date = document.getElementById('task-date').value;
+            const time = document.getElementById('task-time').value;
+            const isUrgent = document.getElementById('task-urgent').checked;
+            
+            // Валидация
+            if (!title) {
+                alert('Введите описание задачи');
+                return;
+            }
+            
+            if (!selectedUser) {
+                alert('Выберите исполнителя');
+                return;
+            }
+            
+            const assigneeId = selectedUser.dataset.userId;
+            let deadline = null;
+            
+            if (date) {
+                deadline = new Date(`${date}T${time}`);
+                if (isNaN(deadline.getTime())) {
+                    alert('Некорректная дата выполнения');
+                    return;
+                }
+            }
+            
+            // Создаем задачу
+            const task = {
+                id: generateId(),
+                title: title,
+                assigneeId: assigneeId,
+                createdById: state.currentUser.id,
+                status: CONFIG.TASK_STATUS.ACTIVE,
+                isUrgent: isUrgent,
+                deadline: deadline ? deadline.toISOString() : null,
+                createdAt: new Date().toISOString(),
+                completedAt: null
+            };
+            
+            // Добавляем задачу
+            state.tasks.push(task);
+            
+            // Сохраняем данные
+            await saveToStorage();
+            
+            // Закрываем модальное окно
+            hideAddTaskModal();
+            
+            // Обновляем UI
+            loadTasks();
+            
+            // Показываем уведомление
+            showNotification('Задача добавлена!');
+        }
+        
+        async function toggleTaskCompletion(taskId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+            
+            if (task.status === CONFIG.TASK_STATUS.ACTIVE) {
+                task.status = CONFIG.TASK_STATUS.COMPLETED;
+                task.completedAt = new Date().toISOString();
+            } else {
+                task.status = CONFIG.TASK_STATUS.ACTIVE;
+                task.completedAt = null;
+            }
+            
+            // Сохраняем изменения
+            await saveToStorage();
+            
+            // Обновляем UI
+            loadTasks();
+        }
+        
+        // ===================== ХРАНИЛИЩЕ ДАННЫХ =====================
+        async function saveToStorage() {
+            const data = {
+                users: state.users,
+                tasks: state.tasks,
+                lastSync: new Date().toISOString()
+            };
+            
+            try {
+                if (tgInitialized && tg.CloudStorage) {
+                    // Сохраняем в Telegram Cloud Storage
+                    return new Promise((resolve, reject) => {
+                        tg.CloudStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data), (error) => {
+                            if (error) {
+                                reject(error);
+                            } else {
+                                state.lastSync = data.lastSync;
+                                resolve();
+                            }
+                        });
+                    });
+                } else {
+                    // Сохраняем в localStorage браузера
+                    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
+                    state.lastSync = data.lastSync;
+                }
+                
+                console.log('Данные сохранены:', {
+                    users: state.users.length,
+                    tasks: state.tasks.length
+                });
+                
+            } catch (error) {
+                console.error('Ошибка сохранения данных:', error);
+                throw error;
+            }
+        }
+        
+        async function loadFromStorage() {
+            try {
+                if (tgInitialized && tg.CloudStorage) {
+                    // Загружаем из Telegram Cloud Storage
+                    return new Promise((resolve) => {
+                        tg.CloudStorage.getItem(CONFIG.STORAGE_KEY, (error, savedData) => {
+                            if (error || !savedData) {
+                                resolve(null);
+                            } else {
+                                try {
+                                    resolve(JSON.parse(savedData));
+                                } catch (parseError) {
+                                    console.error('Ошибка парсинга данных:', parseError);
+                                    resolve(null);
+                                }
+                            }
+                        });
+                    });
+                } else {
+                    // Загружаем из localStorage браузера
+                    const savedData = localStorage.getItem(CONFIG.STORAGE_KEY);
+                    return savedData ? JSON.parse(savedData) : null;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                return null;
+            }
+        }
+        
+        // ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+        
+        function getUserDisplayName(user) {
+            return `${user.firstName} ${user.lastName}`.trim();
+        }
+        
+        function getUserInitials(user) {
+            return (user.firstName[0] + (user.lastName?.[0] || '')).toUpperCase();
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+        
+        function formatDeadline(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        function isTaskOverdue(task) {
+            if (!task.deadline || task.status === CONFIG.TASK_STATUS.COMPLETED) {
+                return false;
+            }
+            
+            const deadline = new Date(task.deadline);
+            const now = new Date();
+            return deadline < now;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function updateStatistics() {
+            const activeTasks = state.tasks.filter(task => 
+                task.status === CONFIG.TASK_STATUS.ACTIVE
+            );
+            
+            const urgentTasks = activeTasks.filter(task => task.isUrgent);
+            const overdueTasks = activeTasks.filter(task => isTaskOverdue(task));
+            
+            document.getElementById('stats-active').textContent = activeTasks.length;
+            document.getElementById('stats-urgent').textContent = urgentTasks.length;
+            document.getElementById('stats-total').textContent = state.tasks.length;
+            
+            // Обновляем иконку синхронизации
+            const syncIcon = document.getElementById('sync-icon');
+            if (syncIcon && state.lastSync) {
+                const lastSyncDate = new Date(state.lastSync);
+                const now = new Date();
+                const diffMinutes = Math.floor((now - lastSyncDate) / (1000 * 60));
+                
+                if (diffMinutes < 5) {
+                    syncIcon.style.color = '#4caf50';
+                } else if (diffMinutes < 30) {
+                    syncIcon.style.color = '#ff9800';
+                } else {
+                    syncIcon.style.color = '#f44336';
+                }
+                
+                syncIcon.title = `Последняя синхронизация: ${lastSyncDate.toLocaleString('ru-RU')}`;
+            }
+        }
+        
+        function updateUI() {
+            // Обновляем имя пользователя
+            updateUserDisplay();
+            
+            // Обновляем статистику
+            updateStatistics();
+        }
+        
+        function showNotification(message) {
+            // Можно использовать Telegram WebApp для показа уведомлений
+            if (tgInitialized && tg.showPopup) {
+                tg.showPopup({
+                    title: 'Уведомление',
+                    message: message,
+                    buttons: [{ type: 'ok' }]
+                });
+            } else {
+                alert(message);
+            }
+        }
+        
+        function showError(message) {
+            if (tgInitialized && tg.showPopup) {
+                tg.showPopup({
+                    title: 'Ошибка',
+                    message: message,
+                    buttons: [{ type: 'ok' }]
+                });
+            } else {
+                alert('Ошибка: ' + message);
+            }
+        }
+        
+        // Экспортируем функции для отладки
+        window.debugState = () => {
+            console.log('Состояние:', state);
+            console.log('Пользователи:', state.users);
+            console.log('Задачи:', state.tasks);
+        };
+        
+        window.debugClearData = async () => {
+            if (confirm('Очистить все данные? Это действие нельзя отменить.')) {
+                state.tasks = [];
+                await saveToStorage();
+                loadTasks();
+                showNotification('Все данные очищены');
+            }
+        };
+        
+        window.debugAddTestTasks = () => {
+            const testUsers = state.users.filter(u => u.id !== state.currentUser.id);
+            if (testUsers.length === 0) return;
+            
+            const testTasks = [
+                {
+                    title: 'Подготовить отчет по продажам за неделю',
+                    isUrgent: false,
+                    daysFromNow: 2
+                },
+                {
+                    title: 'СРОЧНО: Заказать расходные материалы',
+                    isUrgent: true,
+                    daysFromNow: 1
+                },
+                {
+                    title: 'Обновить прайс-лист в системе',
+                    isUrgent: false,
+                    daysFromNow: 3
+                }
+            ];
+            
+            testTasks.forEach((testTask, index) => {
+                const assignee = testUsers[index % testUsers.length];
+                const deadline = new Date();
+                deadline.setDate(deadline.getDate() + testTask.daysFromNow);
+                
+                const task = {
+                    id: generateId(),
+                    title: testTask.title,
+                    assigneeId: assignee.id,
+                    createdById: state.currentUser.id,
+                    status: CONFIG.TASK_STATUS.ACTIVE,
+                    isUrgent: testTask.isUrgent,
+                    deadline: deadline.toISOString(),
+                    createdAt: new Date().toISOString(),
+                    completedAt: null
+                };
+                
+                state.tasks.push(task);
+            });
+            
+            saveToStorage();
+            loadTasks();
+            showNotification('Добавлены тестовые задачи');
+        };
+        
+    </script>
+</body>
+</html>
